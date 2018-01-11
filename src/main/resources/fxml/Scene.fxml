@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane id="AnchorPane" prefHeight="320.0" prefWidth="390.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="hu.infokristaly.homework4nfcserialreader.FXMLController">
+    <children>
+        <Button fx:id="connectButton" layoutX="201.0" layoutY="14.0" onAction="#handleConnectButtonAction" text="Connect" AnchorPane.rightAnchor="114.0" AnchorPane.topAnchor="14.0" />
+        <Button fx:id="beepButton" disable="true" layoutX="14.0" layoutY="59.0" onAction="#handleBeepButtonAction" text="Beep" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="59.0" />
+        <Button fx:id="disconnectButton" disable="true" layoutX="261.0" layoutY="14.0" onAction="#handleDisconnectButtonAction" prefHeight="31.0" prefWidth="94.0" text="Disconnect" AnchorPane.rightAnchor="13.0" AnchorPane.topAnchor="14.0" />
+        <Button fx:id="readCardIdButton" disable="true" layoutX="73.0" layoutY="59.0" onAction="#handleCardIdButtonAction" prefHeight="31.0" prefWidth="118.0" text="ReadCardId" AnchorPane.leftAnchor="73.0" AnchorPane.topAnchor="59.0" />
+        <Label fx:id="label" layoutX="126" layoutY="120" minHeight="16" minWidth="69" />
+        <ComboBox id="serialPortList" fx:id="serialPortList" layoutX="14.0" layoutY="14.0" prefHeight="31.0" prefWidth="176.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="200.0" AnchorPane.topAnchor="14.0" />
+      <TextArea fx:id="logArea" editable="false" layoutX="13.0" layoutY="106.0" prefHeight="200.0" prefWidth="342.0" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="13.0" AnchorPane.rightAnchor="13.0" AnchorPane.topAnchor="106.0" />    
+    </children>
+</AnchorPane>
