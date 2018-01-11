@@ -26,7 +26,7 @@ public class MainApp extends Application {
         mainStage = stage;
         scene.getStylesheets().add("/styles/Styles.css");
 
-        stage.setTitle("JavaFX and Maven");
+        stage.setTitle("ER302 NFC reader-writer");
         stage.setScene(scene);
         stage.show();
 
