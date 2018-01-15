@@ -39,7 +39,7 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
     private Button readCardIdButton;
 
     private SerialPort serialPort;
-    
+
     private static final String newLine = System.getProperty("line.separator");
 
     private byte[] typeBytes;
@@ -162,6 +162,7 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
         if (event.isRXCHAR()) {
             int count = event.getEventValue();
             if (count > 0) {
+                log("received bytes count: " + count);
                 try {
                     byte buffer[] = serialPort.readBytes(count);
                     String input = ER302Driver.byteArrayToHexString(buffer); //"distance:50 mm" 
@@ -240,7 +241,9 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
 
     private void log(String msg) {
         System.out.println(msg);
-        logArea.appendText(msg + newLine);
+        if (msg != null) {
+            logArea.appendText(msg + newLine);
+        }
     }
 
     private void updateButtons(boolean connected) {

@@ -17,7 +17,6 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 public class ER302Driver {
 
     public static class ReceivedStruct {
-
         byte[] cmd;
         byte[] data;
     }
@@ -139,7 +138,7 @@ public class ER302Driver {
                     System.out.println("Received data:" + byteArrayToHexString(result.data));
                     if (result.data[0] == 0x00) {
                         byte crc = rc[rc.length - 1];
-                        byte crcCalc = crc(Arrays.copyOfRange(rc, 4, rc.length - 2));
+                        byte crcCalc = crc(Arrays.copyOfRange(rc, 4, rc.length - 1));
                         if (crc == crcCalc) {
                             System.out.println("Valid CRC code.");
                         } else {
