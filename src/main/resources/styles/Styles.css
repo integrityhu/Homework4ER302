@@ -1,3 +1,10 @@
 .button {
     -fx-font-weight: bold;
 }
+
+.text-area > .scroll-pane{
+
+-fx-vbar-policy:always; /* Control the vertical ScrollBar (always,needed,never) */
+-fx-hbar-policy:always; /* Control the horizontal ScrollBar (always,needed,never) */
+
+}

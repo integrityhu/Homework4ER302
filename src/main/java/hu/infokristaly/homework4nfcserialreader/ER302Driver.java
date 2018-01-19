@@ -7,6 +7,8 @@ package hu.infokristaly.homework4nfcserialreader;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 
 /**
@@ -16,17 +18,59 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
  */
 public class ER302Driver {
 
+    public static class CommandStruct {
+        int id;
+        byte[] cmd;
+        String descrition;
+
+        ReceivedStruct result;
+
+        CommandStruct(int id, String descriptor, byte[] cmd) {
+            this.id = id;
+            this.descrition = descriptor;
+            this.cmd = cmd;
+        }
+        
+        public String getDescrition() {
+            return descrition;
+        }
+
+        public void setDescrition(String descrition) {
+            this.descrition = descrition;
+        }
+
+        public byte[] getCmd() {
+            return cmd;
+        }
+
+        public void setCmd(byte[] cmd) {
+            this.cmd = cmd;
+        }
+        public void setResult(ReceivedStruct result) {
+            this.result = result;
+        }
+
+        public ReceivedStruct getResult() {
+            return this.result;
+        }
+    }
+
     public static class ReceivedStruct {
+        int length = 0;
         byte[] cmd;
         byte[] data;
+        byte crc;
+        boolean valid = false;
+        byte error;
+        List<String> log = new LinkedList<String>();
     }
 
     // Mifare types
-    public static byte[] TYPE_MIFARE_UL = {0x00,0x44};
-    public static byte[] TYPE_MIFARE_1K = {0x00,0x04};
-    public static byte[] TYPE_MIFARE_4K = {0x00,0x02};
-    public static byte[] TYPE_MIFARE_DESFIRE = {0x03,0x44};
-    public static byte[] TYPE_MIFARE_PRO = {0x00,0x08};
+    public static byte[] TYPE_MIFARE_UL = {0x44, 0x00};
+    public static byte[] TYPE_MIFARE_1K = {0x04, 0x00};
+    public static byte[] TYPE_MIFARE_4K = {0x02, 0x00};
+    public static byte[] TYPE_MIFARE_DESFIRE = {0x44, 0x03};
+    public static byte[] TYPE_MIFARE_PRO = {0x08, 0x00};
 
     // Command header
     public static byte[] HEADER = {(byte) 0xAA, (byte) 0xBB};
@@ -102,8 +146,9 @@ public class ER302Driver {
         return result;
     }
 
-    public static byte[] intToByteArray(int input) {
-        return ByteBuffer.allocate(4).putInt(input).array();
+    public static byte[] intToByteArray(int input, boolean bigEndian) {
+        byte[] result = ByteBuffer.allocate(4).putInt(input).array();
+        return bigEndian ? result : new byte[]{result[3], result[2], result[1], result[0]};
     }
 
     public static byte[] shortToByteArray(short input, boolean bigEndian) {
@@ -116,7 +161,7 @@ public class ER302Driver {
         return result;
     }
 
-    static byte crc(byte[] input) {
+    public static byte crc(byte[] input) {
         byte result = 0;
         for (int i = 0; i < input.length; i++) {
             result ^= input[i];
@@ -124,43 +169,47 @@ public class ER302Driver {
         return result;
     }
 
-    public static ReceivedStruct decodeReceivedData(byte[] rc) {
+    public static int byteArrayToInteger(byte[] src, boolean bigEndian) {
+        ByteBuffer wrapped = ByteBuffer.wrap(bigEndian ? src : new byte[]{src[3], src[2], src[1], src[0]}); // big-endian by default
+        int num = wrapped.getInt();
+        return num;
+    }
+
+    public static short byteArrayToShort(byte[] src, boolean bigEndian) {
+        ByteBuffer wrapped = ByteBuffer.wrap(bigEndian ? src : new byte[]{src[1], src[0]}); // big-endian by default
+        short num = wrapped.getShort();
+        return num;
+    }
+
+    public static ReceivedStruct decodeReceivedData(byte[] rc) throws IndexOutOfBoundsException {
         ReceivedStruct result = new ReceivedStruct();
         if (rc.length >= 4) {
             if (Arrays.equals(Arrays.copyOf(rc, 2), HEADER)) {
-                System.out.println("Valid header.");
+                result.log.add("Valid header.");
                 short length = byteArrayToShort(Arrays.copyOfRange(rc, 2, 4), false);
                 if ((length > 0) && (Arrays.equals(Arrays.copyOfRange(rc, 4, 6), RESERVED))) {
-                    System.out.println("Valid reserved word.");
+                    result.log.add("Valid reserved word.");
                     result.cmd = Arrays.copyOfRange(rc, 6, 8);
-                    System.out.println("CMD:" + byteArrayToHexString(result.cmd));
-                    result.data = Arrays.copyOfRange(rc, 8, rc.length - 1);
-                    System.out.println("Received data:" + byteArrayToHexString(result.data));
-                    if (result.data[0] == 0x00) {
-                        byte crc = rc[rc.length - 1];
-                        byte crcCalc = crc(Arrays.copyOfRange(rc, 4, rc.length - 1));
-                        if (crc == crcCalc) {
-                            System.out.println("Valid CRC code.");
+                    result.log.add("CMD:" + byteArrayToHexString(result.cmd));
+                    result.error = rc[8];
+                    result.data = Arrays.copyOfRange(rc, 9, length + 3);
+                    result.length = 4 + length;
+                    result.log.add("Received data:" + byteArrayToHexString(result.data));
+                    if (result.error == 0x00) {
+                        result.crc = rc[result.length - 1];
+                        byte[] crcBase = Arrays.copyOfRange(rc, 4, length + 3);
+                        byte crcCalc = crc(crcBase);
+                        if (result.crc == crcCalc) {
+                            result.log.add("Valid CRC code.");
+                            result.valid = true;
                         } else {
-                            System.out.println("Invalid CRC code!");
+                            result.log.add("Invalid CRC code!");
                         }
                     }
                 }
             }
         }
         return result;
-    }
-
-    private static int byteArrayToInteger(byte[] src) {
-        ByteBuffer wrapped = ByteBuffer.wrap(src); // big-endian by default
-        int num = wrapped.getInt();
-        return num;
-    }
-
-    private static short byteArrayToShort(byte[] src, boolean bigEndian) {
-        ByteBuffer wrapped = ByteBuffer.wrap(bigEndian ? src : new byte[]{src[1], src[0]}); // big-endian by default
-        short num = wrapped.getShort();
-        return num;
     }
 
 }
