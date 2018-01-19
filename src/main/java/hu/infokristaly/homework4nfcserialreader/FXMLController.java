@@ -7,13 +7,11 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -50,8 +48,12 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
     private byte state = 0;
 
     private Queue<ER302Driver.CommandStruct> commands = new LinkedList<ER302Driver.CommandStruct>();
-    private Map<Integer,ER302Driver.CommandStruct> commandMap = new HashMap<Integer,ER302Driver.CommandStruct>();
-    
+    private Map<Integer, ER302Driver.CommandStruct> commandMap = new HashMap<Integer, ER302Driver.CommandStruct>();
+
+    private enum LED {
+        RED, BLUE, OFF
+    };
+
     private ER302Driver.CommandStruct lastCommand;
 
     private SerialPort serialPort;
@@ -91,6 +93,25 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
     private byte[] beep(byte msec) {
         byte[] data = {msec};
         byte[] result = buildCommand(ER302Driver.CMD_BEEP, data);
+        return result;
+    }
+
+    private byte[] led(LED color) {
+        byte[] data;
+        switch(color) {
+            case OFF:
+                data = new byte[]{0x00};
+                break;
+            case RED: 
+                data = new byte[]{0x02}; //changed for my device from 0x01
+                break;
+            case BLUE: 
+                data = new byte[]{0x01}; //changed for my device from 0x02
+                break;
+            default: 
+                data = new byte[]{0x03}; //both led on, but my device is red only
+        }
+        byte[] result = buildCommand(ER302Driver.CMD_LED, data);
         return result;
     }
 
@@ -205,14 +226,14 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
 
     @FXML
     private void handleCardIdButtonAction(ActionEvent event) {
-        try {       
+        try {
             logArea.clear();
             state = 0;
             byte[] statusMsg = buildCommand(ER302Driver.CMD_WORKING_STATUS, new byte[]{0x01, 0x23});
-            lastCommand = new ER302Driver.CommandStruct(0,"Working status", statusMsg);
+            lastCommand = new ER302Driver.CommandStruct(0, "Working status", statusMsg);
             commandMap.put(0, lastCommand);
-            addCommand(new ER302Driver.CommandStruct(1,"Firmware version", readFirmware()));
-            addCommand(new ER302Driver.CommandStruct(2,"MiFare request", mifareRequest()));
+            addCommand(new ER302Driver.CommandStruct(1, "Firmware version", readFirmware()));
+            addCommand(new ER302Driver.CommandStruct(2, "MiFare request", mifareRequest()));
 
             serialPort.writeBytes(statusMsg);
         } catch (SerialPortException ex) {
@@ -275,7 +296,7 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
                         }
 
                     }
-                    if (commands.size()>0) {
+                    if (commands.size() > 0) {
                         lastCommand = commands.poll();
                         if (lastCommand != null) {
                             serialPort.writeBytes(lastCommand.getCmd());
@@ -350,57 +371,57 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
             cardSerialNo = result.data;
             if (Arrays.equals(typeBytes, ER302Driver.TYPE_MIFARE_1K)) {
                 log("CardType: MiFARE Classic 1K");
-                addCommand(new ER302Driver.CommandStruct(4,"MifareSelect", mifareSelect(cardSerialNo)));
+                addCommand(new ER302Driver.CommandStruct(4, "MifareSelect", mifareSelect(cardSerialNo)));
             } else if (Arrays.equals(typeBytes, ER302Driver.TYPE_MIFARE_UL)) {
                 log("CardType: MiFARE UltraLight");
-                addCommand(new ER302Driver.CommandStruct(4,"MifareSelect", mifareULSelect()));
+                addCommand(new ER302Driver.CommandStruct(4, "MifareSelect", mifareULSelect()));
             }
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_REQUEST)) {
             typeBytes = result.data;
-            addCommand(new ER302Driver.CommandStruct(3,"Mifare anticolision", mifareAnticolision()));
+            addCommand(new ER302Driver.CommandStruct(3, "Mifare anticolision", mifareAnticolision()));
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_SELECT) || Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_UL_SELECT)) {
-            addCommand(new ER302Driver.CommandStruct(5,"Auth2", auth2((char) 7)));
+            addCommand(new ER302Driver.CommandStruct(5, "Auth2", auth2((char) 7)));
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_AUTH2)) {
             if (state == 0) {
-                addCommand(new ER302Driver.CommandStruct(6,"Init balance (7/1)", initBalance((char) 7, (char) 1, 10)));
+                addCommand(new ER302Driver.CommandStruct(6, "Init balance (7/1)", initBalance((char) 7, (char) 1, 10)));
             } else if (state == 1) {
-                addCommand(new ER302Driver.CommandStruct(8,"Read balance (7/1)", readBalance((char) 7, (char) 1)));
+                addCommand(new ER302Driver.CommandStruct(8, "Read balance (7/1)", readBalance((char) 7, (char) 1)));
             } else if (state == 2) {
-                addCommand(new ER302Driver.CommandStruct(10,"Inc balance (7/1)", incBalance((char) 7, (char) 1, 2)));
+                addCommand(new ER302Driver.CommandStruct(10, "Inc balance (7/1)", incBalance((char) 7, (char) 1, 2)));
             } else if (state == 3) {
-                addCommand(new ER302Driver.CommandStruct(12,"Read balance (7/1)", readBalance((char) 7, (char) 1)));
+                addCommand(new ER302Driver.CommandStruct(12, "Read balance (7/1)", readBalance((char) 7, (char) 1)));
             } else if (state == 4) {
-                addCommand(new ER302Driver.CommandStruct(14,"Dec balance (7/1)", decBalance((char) 7, (char) 1, 2)));
+                addCommand(new ER302Driver.CommandStruct(14, "Dec balance (7/1)", decBalance((char) 7, (char) 1, 2)));
             } else if (state == 5) {
-                addCommand(new ER302Driver.CommandStruct(16,"Read balance (7/1)", readBalance((char) 7, (char) 1)));
+                addCommand(new ER302Driver.CommandStruct(16, "Read balance (7/1)", readBalance((char) 7, (char) 1)));
             } else if (state == 6) {
-                addCommand(new ER302Driver.CommandStruct(18,"Read block (7/1)", readBlock((char) 7, (char) 0)));
+                addCommand(new ER302Driver.CommandStruct(18, "Read block (7/1)", readBlock((char) 7, (char) 0)));
             } else if (state == 7) {
-                byte[] byteBlock = {0x00,0x01,0x02,0x03};
-                addCommand(new ER302Driver.CommandStruct(20,"Write block (7/1)", writeBlock((char) 7, (char) 0, byteBlock)));
-            } else if (state == 8) { 
-                addCommand(new ER302Driver.CommandStruct(22,"Read block (7/1)", readBlock((char) 7, (char) 0)));
+                byte[] byteBlock = {0x00, 0x01, 0x02, 0x03};
+                addCommand(new ER302Driver.CommandStruct(20, "Write block (7/1)", writeBlock((char) 7, (char) 0, byteBlock)));
+            } else if (state == 8) {
+                addCommand(new ER302Driver.CommandStruct(22, "Read block (7/1)", readBlock((char) 7, (char) 0)));
             }
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_INITVAL)) {
-            addCommand(new ER302Driver.CommandStruct(7,"Auth2", auth2((char) 7)));
+            addCommand(new ER302Driver.CommandStruct(7, "Auth2", auth2((char) 7)));
             state++;
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_INCREMENT)) {
-            addCommand(new ER302Driver.CommandStruct(7 + (2 * state),"Auth2", auth2((char) 7)));
+            addCommand(new ER302Driver.CommandStruct(7 + (2 * state), "Auth2", auth2((char) 7)));
             state++;
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_DECREMENT)) {
-            addCommand(new ER302Driver.CommandStruct(7 + (2 * state),"Auth2", auth2((char) 7)));
+            addCommand(new ER302Driver.CommandStruct(7 + (2 * state), "Auth2", auth2((char) 7)));
             state++;
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_READ_BALANCE)) {
             int value = ER302Driver.byteArrayToInteger(result.data, false);
             log("Read balance decimal(" + value + ")");
-            addCommand(new ER302Driver.CommandStruct(7 + (2 * state),"Auth", auth2((char) 7)));
+            addCommand(new ER302Driver.CommandStruct(7 + (2 * state), "Auth", auth2((char) 7)));
             state++;
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_READ_BLOCK)) {
-            addCommand(new ER302Driver.CommandStruct(7 + (2 * state),"Auth", auth2((char) 7)));
-            state++;            
+            addCommand(new ER302Driver.CommandStruct(7 + (2 * state), "Auth", auth2((char) 7)));
+            state++;
         } else if (Arrays.equals(result.cmd, ER302Driver.CMD_MIFARE_WRITE_BLOCK)) {
-            addCommand(new ER302Driver.CommandStruct(7 + (2 * state),"Auth", auth2((char) 7)));
-            state++;                        
+            addCommand(new ER302Driver.CommandStruct(7 + (2 * state), "Auth", auth2((char) 7)));
+            state++;
         }
     }
 
@@ -419,7 +440,7 @@ public class FXMLController implements Initializable, jssc.SerialPortEventListen
         }
 
     }
-    
+
     private void addCommand(ER302Driver.CommandStruct cmd) {
         commandMap.put(cmd.id, cmd);
         commands.add(cmd);
